@@ -32,6 +32,12 @@ runs:
         echo ${{ inputs.new-app-version }} > VERSION
       shell: bash
 
+    - name: Bump VERSION file in chart
+      if: ${{ inputs.helm && inputs.new-chart-version != '' }}
+      run: |
+        echo ${{ inputs.new-chart-version }} > ./charts/VERSION
+      shell: bash
+
     - name: Bump version in helm chart
       if: ${{ inputs.helm && inputs.new-chart-version != '' }}
       # We are using sed instead of yq as yq is not preserving empty lines. See https://github.com/mikefarah/yq/issues/515
