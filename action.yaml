@@ -73,13 +73,21 @@ runs:
         echo $NEW_CHART_VERSION > ./charts/VERSION
       shell: bash
 
-    - name: Bump version and appVersion in helm chart
+    - name: Bump version in helm chart
       if: ${{ inputs.helm == 'true' }}
       # We are using sed instead of yq as yq is not preserving empty lines. See https://github.com/mikefarah/yq/issues/515
       run: |
         if [ -f "./charts/Chart.yaml" ]; then
           find ./charts -name "Chart.yaml" -exec sed -i -E "s/version: [0-9\.]*/version: "$NEW_CHART_VERSION"/g" {} \;
-          find ./charts -name "Chart.yaml" -exec sed -i -E "s/appVersion: [0-9\.]*/version: "$NEW_APP_VERSION"/g" {} \;
+        fi
+      shell: bash
+
+    - name: Bump appVersion in helm chart
+      if: ${{ inputs.helm == 'true' && env.UPDATE_APP == 'true' }}
+      # We are using sed instead of yq as yq is not preserving empty lines. See https://github.com/mikefarah/yq/issues/515
+      run: |
+        if [ -f "./charts/Chart.yaml" ]; then
+          find ./charts -name "Chart.yaml" -exec sed -i -E "s/appVersion: [0-9\.]*/appVersion: "$NEW_APP_VERSION"/g" {} \;
         fi
       shell: bash
 
