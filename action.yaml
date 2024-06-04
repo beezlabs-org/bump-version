@@ -27,19 +27,19 @@ runs:
     
     - name: Check if app should be updated
       run: |
-        if [ "${{ inputs.node }}" == "true" ]; then
+        if [ "${{ inputs.node }}" == 'true' ]; then
           echo "UPDATE_APP=true" >> $GITHUB_ENV
         fi
       shell: bash
     
     - name: Get current app version
-      if: ${{ env.UPDATE_APP == "true" }}
+      if: ${{ env.UPDATE_APP == 'true' }}
       run: |
         echo "APP_VERSION=$(cat VERSION)" >> $GITHUB_ENV
       shell: bash
     
     - name: Get current chart version
-      if: ${{ inputs.helm == "true" }}
+      if: ${{ inputs.helm == 'true' }}
       run: |
         echo "CHART_VERSION=$(cat ./charts/VERSION)" >> $GITHUB_ENV
       shell: bash
@@ -50,31 +50,31 @@ runs:
       shell: bash
 
     - name: Increment App versions
-      if: ${{ env.UPDATE_APP == "true" }}
+      if: ${{ env.UPDATE_APP == 'true' }}
       run: |
         echo "NEW_APP_VERSION=$(semver -i ${{ inputs.increment }} $APP_VERSION)" >> $GITHUB_ENV
       shell: bash
 
     - name: Increment Chart versions
-      if: ${{ inputs.helm == "true" }}
+      if: ${{ inputs.helm == 'true' }}
       run: |
         echo "NEW_CHART_VERSION=$(semver -i ${{ inputs.increment }} $CHART_VERSION)" >> $GITHUB_ENV
       shell: bash
 
     - name: Bump VERSION file
-      if: ${{ env.UPDATE_APP == "true" }}
+      if: ${{ env.UPDATE_APP == 'true' }}
       run: |
         echo $NEW_APP_VERSION > VERSION
       shell: bash
 
     - name: Bump VERSION file in chart
-      if: ${{ inputs.helm == "true" }}
+      if: ${{ inputs.helm == 'true' }}
       run: |
         echo $NEW_CHART_VERSION > ./charts/VERSION
       shell: bash
 
     - name: Bump version and appVersion in helm chart
-      if: ${{ inputs.helm == "true" }}
+      if: ${{ inputs.helm == 'true' }}
       # We are using sed instead of yq as yq is not preserving empty lines. See https://github.com/mikefarah/yq/issues/515
       run: |
         if [ -f "./charts/Chart.yaml" ]; then
@@ -84,7 +84,7 @@ runs:
       shell: bash
 
     - name: Bump package.json and package-lock.json
-      if: ${{ env.UPDATE_APP == "true" }}
+      if: ${{ env.UPDATE_APP == 'true' }}
       run: |
         yq -i -j -P '.version = "$NEW_APP_VERSION"' 'package.json'
         if [ -f "./package-lock.json" ]; then
