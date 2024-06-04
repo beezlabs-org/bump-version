@@ -29,6 +29,8 @@ runs:
       run: |
         if [ "${{ inputs.node }}" == 'true' ]; then
           echo "UPDATE_APP=true" >> $GITHUB_ENV
+        else
+          echo "UPDATE_APP=false" >> $GITHUB_ENV
         fi
       shell: bash
     
