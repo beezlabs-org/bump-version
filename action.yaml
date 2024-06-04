@@ -93,11 +93,31 @@ runs:
 
     - name: Bump package.json and package-lock.json
       if: ${{ env.UPDATE_APP == 'true' }}
+      # We are using env.NEW_APP_VERSION instead of $NEW_APP_VERSION as yq does not easily substitute variables
       run: |
-        yq -i -j -P '.version = "$NEW_APP_VERSION"' 'package.json'
+        yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}"' 'package.json'
         if [ -f "./package-lock.json" ]; then
-          yq -i -j -P '.version = "$NEW_APP_VERSION" | .packages[""].version = "$NEW_APP_VERSION"' 'package-lock.json'
+          yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}" | .packages[""].version = "${{ env.NEW_APP_VERSION }}"' 'package-lock.json'
         fi
+      shell: bash
+
+      # Create commit messages
+    - name: Commit message for only chart
+      if: ${{ inputs.helm == 'true' && env.UPDATE_APP == 'false' }}
+      run: |
+        echo "COMMIT_MESSAGE="feat: bump chart version to $NEW_CHART_VERSION"" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Commit message for only app
+      if: ${{ inputs.helm == 'false' && env.UPDATE_APP == 'true' }}
+      run: |
+        echo "COMMIT_MESSAGE="feat: bump app version to $NEW_APP_VERSION"" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Commit message for only chart
+      if: ${{ inputs.helm == 'true' && env.UPDATE_APP == 'true' }}
+      run: |
+        echo "COMMIT_MESSAGE="feat: bump chart version to $NEW_CHART_VERSION and app version to $NEW_APP_VERSION"" >> $GITHUB_ENV
       shell: bash
     
     - name: Commit Changes
@@ -108,6 +128,6 @@ runs:
         GIT_COMMITTER_EMAIL: github@beezlabs.com
       run: |
         git add -A
-        git diff-index --quiet HEAD || git commit -m "feat: bump version to $NEW_APP_VERSION"
+        git diff-index --quiet HEAD || git commit -m "$COMMIT_MESSAGE"
         git push
       shell: bash
