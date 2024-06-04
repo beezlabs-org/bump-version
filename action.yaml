@@ -4,20 +4,18 @@ inputs:
   pat:
     description: PAT for accessing the application repo
     required: true
-  new-app-version:
-    description: The new app version to bump to
+  increment:
+    description: The type of increment to make
     required: true
-  new-chart-version:
-    description: The new chart version to bump to
-    required: false
-    default: ""
+    default: patch
   helm:
     description: The project uses Helm
     required: false
+    default: "false"
   node:
     description: The project uses Node
     required: false
-
+    default: "false"
 
 runs:
   using: composite
@@ -26,41 +24,71 @@ runs:
       uses: actions/checkout@v2
       with:
         token: ${{ inputs.pat }}
+    
+    - name: Check if app should be updated
+      run: |
+        if [ "${{ inputs.node }}" == "true" ]; then
+          echo "UPDATE_APP=true" >> $GITHUB_ENV
+        fi
+      shell: bash
+    
+    - name: Get current app version
+      if: ${{ env.UPDATE_APP == "true" }}
+      run: |
+        echo "APP_VERSION=$(cat VERSION)" >> $GITHUB_ENV
+      shell: bash
+    
+    - name: Get current chart version
+      if: ${{ inputs.helm == "true" }}
+      run: |
+        echo "CHART_VERSION=$(cat ./charts/VERSION)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Install semver utility
+      run: |
+        npm i -g semver
+      shell: bash
+
+    - name: Increment App versions
+      if: ${{ env.UPDATE_APP == "true" }}
+      run: |
+        echo "NEW_APP_VERSION=$(semver -i ${{ inputs.increment }} $APP_VERSION)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Increment Chart versions
+      if: ${{ inputs.helm == "true" }}
+      run: |
+        echo "NEW_CHART_VERSION=$(semver -i ${{ inputs.increment }} $CHART_VERSION)" >> $GITHUB_ENV
+      shell: bash
 
     - name: Bump VERSION file
+      if: ${{ env.UPDATE_APP == "true" }}
       run: |
-        echo ${{ inputs.new-app-version }} > VERSION
+        echo $NEW_APP_VERSION > VERSION
       shell: bash
 
     - name: Bump VERSION file in chart
-      if: ${{ inputs.helm && inputs.new-chart-version != '' }}
+      if: ${{ inputs.helm == "true" }}
       run: |
-        echo ${{ inputs.new-chart-version }} > ./charts/VERSION
+        echo $NEW_CHART_VERSION > ./charts/VERSION
       shell: bash
 
-    - name: Bump version in helm chart
-      if: ${{ inputs.helm && inputs.new-chart-version != '' }}
+    - name: Bump version and appVersion in helm chart
+      if: ${{ inputs.helm == "true" }}
       # We are using sed instead of yq as yq is not preserving empty lines. See https://github.com/mikefarah/yq/issues/515
       run: |
         if [ -f "./charts/Chart.yaml" ]; then
-          find . -name "./charts/Chart.yaml" -exec sed -i -E "s/version: [0-9\.]*/version: "${{ inputs.new-chart-version }}"/g" {} \;
-        fi
-      shell: bash
-
-    - name: Bump appVersion in helm chart
-      if: ${{ inputs.helm }}
-      run: |
-        if [ -f "./charts/Chart.yaml" ]; then
-          find . -name "./charts/Chart.yaml" -exec sed -i -E "s/appVersion: [0-9\.]*/version: "${{ inputs.new-app-version }}"/g" {} \;
+          find . -name "./charts/Chart.yaml" -exec sed -i -E "s/version: [0-9\.]*/version: "$NEW_CHART_VERSION"/g" {} \;
+          find . -name "./charts/Chart.yaml" -exec sed -i -E "s/appVersion: [0-9\.]*/version: "$NEW_APP_VERSION"/g" {} \;
         fi
       shell: bash
 
     - name: Bump package.json and package-lock.json
-      if: ${{ inputs.node }}
+      if: ${{ env.UPDATE_APP == "true" }}
       run: |
-        yq -i -j -P '.version = "${{ inputs.new-app-version }}"' 'package.json'
+        yq -i -j -P '.version = "$NEW_APP_VERSION"' 'package.json'
         if [ -f "./package-lock.json" ]; then
-          yq -i -j -P '.version = "${{ inputs.new-app-version }}" | .packages[""].version = "${{ inputs.new-app-version }}"' 'package-lock.json'
+          yq -i -j -P '.version = "$NEW_APP_VERSION" | .packages[""].version = "$NEW_APP_VERSION"' 'package-lock.json'
         fi
       shell: bash
     
@@ -72,6 +100,6 @@ runs:
         GIT_COMMITTER_EMAIL: github@beezlabs.com
       run: |
         git add -A
-        git diff-index --quiet HEAD || git commit -m "feat: bump version to ${{ inputs.new-app-version }}"
+        git diff-index --quiet HEAD || git commit -m "feat: bump version to $NEW_APP_VERSION"
         git push
       shell: bash
