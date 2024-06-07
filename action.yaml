@@ -16,6 +16,10 @@ inputs:
     description: The project uses Node
     required: false
     default: "false"
+  python:
+    description: The project uses Python
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -27,7 +31,7 @@ runs:
     
     - name: Check if app should be updated
       run: |
-        if [ "${{ inputs.node }}" == 'true' ]; then
+        if [ "${{ inputs.node }}" == 'true' ] || [ "${{ inputs.python }}" == 'true' ]; then
           echo "UPDATE_APP=true" >> $GITHUB_ENV
         else
           echo "UPDATE_APP=false" >> $GITHUB_ENV
@@ -94,7 +98,7 @@ runs:
       shell: bash
 
     - name: Bump package.json and package-lock.json
-      if: ${{ env.UPDATE_APP == 'true' }}
+      if: ${{ inputs.node == 'true' }}
       # We are using env.NEW_APP_VERSION instead of $NEW_APP_VERSION as yq does not easily substitute variables
       run: |
         yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}"' 'package.json'
