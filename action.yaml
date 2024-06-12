@@ -28,6 +28,10 @@ inputs:
     description: The project is a Go library
     required: false
     default: "false"
+  java:
+    description: The project uses Java
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -39,7 +43,7 @@ runs:
     
     - name: Check if app should be updated
       run: |
-        if [ "${{ inputs.node }}" == 'true' ] || [ "${{ inputs.python }}" == 'true' ] || [ "${{ inputs.go }}" == 'true' ]; then
+        if [ "${{ inputs.node }}" == 'true' ] || [ "${{ inputs.python }}" == 'true' ] || [ "${{ inputs.go }}" == 'true' ] || [ "${{ inputs.java }}" == 'true' ]; then
           echo "UPDATE_APP=true" >> $GITHUB_ENV
         else
           echo "UPDATE_APP=false" >> $GITHUB_ENV
@@ -118,6 +122,14 @@ runs:
         yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}"' 'package.json'
         if [ -f "./package-lock.json" ]; then
           yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}" | .packages[""].version = "${{ env.NEW_APP_VERSION }}"' 'package-lock.json'
+        fi
+      shell: bash
+
+    - name: Check if app version in build.gradle is used from VERSION file
+      if: ${{ inputs.java == 'true' }}
+      run: |
+        if [ $(grep -E "version.*file\('VERSION'\).text.trim\(\)$" build.gradle) -eq 0 ]; then
+          find . -name "build.gradle" -exec sed -i -E "s/^version.*'/version = file('VERSION').text.trim()/g" {} \;
         fi
       shell: bash
 
