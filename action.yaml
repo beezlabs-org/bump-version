@@ -36,6 +36,10 @@ inputs:
     description: The project uses Java
     required: false
     default: "false"
+  dotnet:
+    description: The project uses Dot Net
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -47,7 +51,7 @@ runs:
     
     - name: Check if app should be updated
       run: |
-        if [ "${{ inputs.node }}" == 'true' ] || [ "${{ inputs.python }}" == 'true' ] || [ "${{ inputs.go }}" == 'true' ] || [ "${{ inputs.java }}" == 'true' ]; then
+        if [ "${{ inputs.node }}" == 'true' ] || [ "${{ inputs.python }}" == 'true' ] || [ "${{ inputs.go }}" == 'true' ] || [ "${{ inputs.java }}" == 'true' ] || [ "${{ inputs.dotnet }}" == 'true' ]; then
           echo "UPDATE_APP=true" >> $GITHUB_ENV
         else
           echo "UPDATE_APP=false" >> $GITHUB_ENV
@@ -142,6 +146,14 @@ runs:
         if [ $(grep -E "version.*file\('VERSION'\).text.trim\(\)$" build.gradle) -eq 0 ]; then
           find . -name "build.gradle" -exec sed -i -E "s/^version.*'/version = file('VERSION').text.trim()/g" {} \;
         fi
+      working-directory: ${{ inputs.working-dir }}
+      shell: bash
+
+    - name: Bump AssemblyInfo.cs
+      if: ${{ inputs.dotnet == 'true' }}
+      run: |
+        find . -name "AssemblyInfo.cs" -exec sed -i "s/AssemblyVersion(\"[0-9\.]*\")/AssemblyVersion(\"${{ env.NEW_APP_VERSION }}.0\")/g" {} \;
+        find . -name "AssemblyInfo.cs" -exec sed -i "s/AssemblyFileVersion(\"[0-9\.]*\")/AssemblyFileVersion(\"${{ env.NEW_APP_VERSION }}.0\")/g" {} \;
       working-directory: ${{ inputs.working-dir }}
       shell: bash
 
