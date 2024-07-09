@@ -133,9 +133,9 @@ runs:
       if: ${{ inputs.node == 'true' }}
       # We are using env.NEW_APP_VERSION instead of $NEW_APP_VERSION as yq does not easily substitute variables
       run: |
-        yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}"' 'package.json'
+        yq -i -o=json -P '.version = "${{ env.NEW_APP_VERSION }}"' 'package.json'
         if [ -f "./package-lock.json" ]; then
-          yq -i -j -P '.version = "${{ env.NEW_APP_VERSION }}" | .packages[""].version = "${{ env.NEW_APP_VERSION }}"' 'package-lock.json'
+          yq -i -o=json -P '.version = "${{ env.NEW_APP_VERSION }}" | .packages[""].version = "${{ env.NEW_APP_VERSION }}"' 'package-lock.json'
         fi
       working-directory: ${{ inputs.working-dir }}
       shell: bash
