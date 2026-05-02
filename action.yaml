@@ -20,6 +20,10 @@ inputs:
     description: The project uses Node
     required: false
     default: "false"
+  npm-workspace-root-lock:
+    description: Update the npm workspace root package-lock.json entry for working-dir
+    required: false
+    default: "false"
   python:
     description: The project uses Python
     required: false
@@ -48,7 +52,7 @@ runs:
       uses: actions/checkout@v2
       with:
         token: ${{ inputs.pat }}
-    
+
     - name: Check if app should be updated
       run: |
         if [ "${{ inputs.node }}" == 'true' ] || [ "${{ inputs.python }}" == 'true' ] || [ "${{ inputs.go }}" == 'true' ] || [ "${{ inputs.java }}" == 'true' ] || [ "${{ inputs.dotnet }}" == 'true' ]; then
@@ -57,14 +61,14 @@ runs:
           echo "UPDATE_APP=false" >> $GITHUB_ENV
         fi
       shell: bash
-    
+
     - name: Get current app version
       if: ${{ env.UPDATE_APP == 'true' }}
       run: |
         echo "APP_VERSION=$(cat VERSION)" >> $GITHUB_ENV
       working-directory: ${{ inputs.working-dir }}
       shell: bash
-    
+
     - name: Get current chart version
       if: ${{ inputs.helm == 'true' }}
       run: |
@@ -140,6 +144,16 @@ runs:
       working-directory: ${{ inputs.working-dir }}
       shell: bash
 
+    - name: Bump npm workspace root package-lock.json
+      if: ${{ inputs.node == 'true' && inputs.npm-workspace-root-lock == 'true' }}
+      run: |
+        WORKSPACE="${{ inputs.working-dir }}"
+        WORKSPACE="${WORKSPACE#./}"
+        if [ -f "$GITHUB_WORKSPACE/package-lock.json" ] && [ "$WORKSPACE" != "." ]; then
+          WORKSPACE="$WORKSPACE" yq -i -o=json -P '.packages[strenv(WORKSPACE)].version = "${{ env.NEW_APP_VERSION }}"' "$GITHUB_WORKSPACE/package-lock.json"
+        fi
+      shell: bash
+
     - name: Check if app version in build.gradle is used from VERSION file
       if: ${{ inputs.java == 'true' }}
       run: |
@@ -178,7 +192,7 @@ runs:
         echo "COMMIT_MESSAGE="feat: bump chart version to $NEW_CHART_VERSION and app version to $NEW_APP_VERSION"" >> $GITHUB_ENV
       working-directory: ${{ inputs.working-dir }}
       shell: bash
-    
+
     - name: Commit Changes
       env:
         GIT_AUTHOR_NAME: Beez Innovation Labs
